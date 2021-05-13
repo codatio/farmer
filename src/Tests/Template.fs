@@ -5,14 +5,11 @@ open Expecto
 open Farmer
 open Farmer.Builders
 open Farmer.Arm
-open Newtonsoft.Json
+open System.Text.Json
 open Microsoft.Rest
 open Microsoft.Azure.Management.ResourceManager
-open Microsoft.Azure.Management.ResourceManager.Models
 open Microsoft.Azure.Management.Resources.Models
-open Newtonsoft.Json
-open System.IO
-open Newtonsoft.Json.Linq
+open BlushingPenguin.JsonPath
 
 let dummyClient = new ResourceManagementClient (Uri "http://management.azure.com", TokenCredentials "NotNullOrWhiteSpace")
 
@@ -41,7 +38,7 @@ let tests = testList "Template" [
     }
     test "Correctly generates outputs" {
         let arm = arm { location Location.NorthEurope; output "p1" "v1"; output "p2" "v2"; add_resource (storageAccount{name "stg"}) }
-        let template = arm |> toTemplate |> Newtonsoft.Json.Linq.JObject.FromObject
+        let template = arm |> toTemplate |> JsonSerializer.Serialize |> JsonDocument.Parse
         let getValue = template.SelectToken >> string
         let getTokens = template.SelectTokens
         Expect.equal (getValue "$.resources.[1].properties.template.outputs.p1.value") "v1" ""
@@ -80,7 +77,7 @@ let tests = testList "Template" [
                 storageAccount { name "test2" }
             ]
         }
-        let storages = template |> findAzureResourcesByType<obj> Arm.Storage.storageAccounts (JsonSerializerSettings())
+        let storages = template |> findAzureResourcesByType<obj> Arm.Storage.storageAccounts (dummyClient.SerializationSettings)
 
         Expect.hasLength storages 2 "Should be two resources"
     }
@@ -92,7 +89,7 @@ let tests = testList "Template" [
                 storageAccount { name "test" }
             ]
         }
-        let storages = template |> findAzureResourcesByType<obj> Arm.Storage.storageAccounts (JsonSerializerSettings())
+        let storages = template |> findAzureResourcesByType<obj> Arm.Storage.storageAccounts (dummyClient.SerializationSettings)
 
         Expect.hasLength storages 1 "Should be a single resource"
     }
@@ -141,7 +138,7 @@ let tests = testList "Template" [
             output "foo" "baz"
             output "bar" "bop"
         }
-        let template = arm |> toTemplate |> Newtonsoft.Json.Linq.JObject.FromObject
+        let template = arm |> toTemplate |> JsonSerializer.Serialize |> JsonDocument.Parse
         let getValue = template.SelectToken >> string
         let getTokens = template.SelectTokens
         
@@ -226,11 +223,11 @@ let tests = testList "Template" [
                         name "inner"
                         add_resource (storageAccount{name "storage"})
                     })
-            } |> toTemplate |> JObject.FromObject
+            } |> toTemplate |> JsonSerializer.Serialize |> JsonDocument.Parse
         
         let nestedResources = 
             resources.SelectTokens("$.resources[1].properties.template.resources[*].dependsOn")
-            |> Seq.collect id
+            |> Seq.collect (fun dependsOnProperty -> dependsOnProperty.GetString())
             |> Seq.map string
 
         let badDependencies = 

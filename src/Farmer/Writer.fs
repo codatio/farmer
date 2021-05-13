@@ -1,6 +1,6 @@
 module Farmer.Writer
 
-open Newtonsoft.Json
+open System.Text.Json
 open System.IO
 open System
 open System.Reflection
@@ -23,7 +23,10 @@ module TemplateGeneration =
     |}
 
     let serialize data =
-        JsonConvert.SerializeObject(data, Formatting.Indented, JsonSerializerSettings(NullValueHandling = NullValueHandling.Ignore))
+        let opts = JsonSerializerOptions()
+        opts.WriteIndented <- true
+        opts.IgnoreNullValues <- true
+        JsonSerializer.Serialize(data, opts)
 
 let branding () =
     let version =

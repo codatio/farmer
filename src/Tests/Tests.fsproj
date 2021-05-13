@@ -50,6 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BlushingPenguin.JsonPath" Version="1.0.3" />
     <PackageReference Include="expecto" Version="9.0.2" />
     <PackageReference Include="Microsoft.Azure.Management.ResourceManager " Version="3.10.1-preview" />
     <PackageReference Include="Microsoft.Azure.Management.Resources" Version="2.0.2-preview" />

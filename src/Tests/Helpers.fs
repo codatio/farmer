@@ -3,8 +3,8 @@ module TestHelpers
 
 open Farmer
 open Microsoft.Rest.Serialization
-open Newtonsoft.Json
-open Newtonsoft.Json.Linq
+open System.Text.Json
+open BlushingPenguin.JsonPath
 open Farmer.Arm.ResourceGroup
 
 [<AutoOpen>]
@@ -19,7 +19,7 @@ module TestHelpers =
               Resources = []
           }
         }
-    let convertTo<'T> = JsonConvert.SerializeObject >> JsonConvert.DeserializeObject<'T>
+    let convertTo<'T> = JsonSerializer.Serialize >> JsonSerializer.Deserialize<'T>
 
 let farmerToMs<'T when 'T : null> (serializationSettings:Newtonsoft.Json.JsonSerializerSettings) data =
     data
@@ -34,9 +34,9 @@ let private flattenResourcesQuery = sprintf "$..resources.[?(@.type != '%s')]" A
 let getResourceTokens deployment =
     let template = 
         Deployment.getTemplate "farmer-resources" deployment 
-        |> Writer.TemplateGeneration.processTemplate
-    let jobj = JObject.FromObject template
-    jobj.SelectTokens flattenResourcesQuery
+        |> Writer.toJson
+        |> JsonDocument.Parse
+    template.SelectTokens flattenResourcesQuery
 
 let getResources (deployment:IDeploymentBuilder) =
     let rec flatten (resList:IArmResource list) = 
@@ -64,10 +64,12 @@ let getResourceByName<'a when 'a:>IArmResource > name (deployment:IDeploymentBui
        | x -> failwithf "More than one matching resource found: %A" x
 
 let getResourceGroupDeploymentFromTemplate<'a> (template:ArmTemplate) =
-    let template = Writer.TemplateGeneration.processTemplate template 
-    let jobj = JArray.FromObject template.resources
-    let rgd = jobj.SelectToken (sprintf "$.[?(@.type == '%s')].properties.template" Arm.ResourceGroup.resourceGroupDeployments.Type)
-    rgd.ToObject<'a>()
+    let template =
+      template
+      |> Writer.toJson
+      |> JsonDocument.Parse
+    let rgd = template.SelectToken (sprintf "$.resources[?(@.type == '%s')].properties.template" Arm.ResourceGroup.resourceGroupDeployments.Type)
+    JsonSerializer.Deserialize<'a>(rgd.Value.GetRawText())
     
 let findAzureResources<'T when 'T : null> (serializationSettings:Newtonsoft.Json.JsonSerializerSettings) deployment =
     let tokens = getResourceTokens deployment
@@ -77,7 +79,7 @@ let findAzureResources<'T when 'T : null> (serializationSettings:Newtonsoft.Json
 
 let findAzureResourcesByType<'T when 'T : null> (resourceType:ResourceType) (serializationSettings:Newtonsoft.Json.JsonSerializerSettings) deployment =
      getResourceTokens deployment
-    |> Seq.filter (fun x-> x.["type"].Value<string>() = resourceType.Type)
+    |> Seq.filter (fun x-> x.GetProperty("type").GetString() = resourceType.Type)
     |> Seq.map string
     |> Seq.choose (fun json -> SafeJsonConvert.DeserializeObject<'T>(json, serializationSettings) |> Option.ofObj)
     |> Seq.toList

@@ -14,6 +14,7 @@ let getResource<'T when 'T :> IArmResource> (data:IArmResource list) = data |> L
 /// Client instance needed to get the serializer settings.
 let dummyClient = new WebSiteManagementClient (Uri "http://management.azure.com", TokenCredentials "NotNullOrWhiteSpace")
 let getResourceAtIndex o = o |> getResourceAtIndex dummyClient.SerializationSettings
+let getResources (b:#IBuilder) = b.BuildResources Location.WestEurope
 
 let tests = testList "Functions tests" [
     test "Renames storage account correctly" {
@@ -74,5 +75,18 @@ let tests = testList "Functions tests" [
 
         let f:Site = functions { worker_process Bitness.Bits64 } |> getResourceAtIndex 0
         Expect.equal f.SiteConfig.Use32BitWorkerProcess (Nullable false) "Should not use 32 bit worker process"
+    }
+
+    test "FunctionsApp supports adding slots" {
+        let slot = appSlot { name "warm-up" }
+        let site = functions { add_slot slot }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+
+        Expect.hasLength slots 1 "Should only be 1 slot"
     }
 ]

@@ -2,11 +2,11 @@ module PostgreSQL
 
 open System
 
+open System.Text.Json
 open Expecto
 open Farmer
 open Farmer.PostgreSQL
 open Farmer.Builders
-open Newtonsoft.Json.Linq
 open Farmer.Arm
 
 type PostgresSku =
@@ -37,7 +37,7 @@ type PostgresTemplate =
       sku : PostgresSku
       location : string
       geoRedundantBackup : string
-      resources : JToken list
+      resources : JsonElement list
       properties : Properties }
 
 type Dependencies = string array

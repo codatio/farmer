@@ -170,7 +170,7 @@ type FunctionsConfig =
                   ServicePlan = this.ServicePlanId
                   Site = this.ResourceId
                   Tags = this.Tags
-                  AutoSwapSlotName = kvp.Value.AutoSwapSlotName
+                  AutoSwapSlotName = cfg.AutoSwapSlotName
                   AppSettings = cfg.AppSettings
                   ConnectionStrings = cfg.ConnectionStrings }
         ]

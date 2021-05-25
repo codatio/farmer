@@ -1,6 +1,6 @@
 ﻿module Farmer.Deploy
 
-open Newtonsoft.Json
+open System.Text.Json
 open System
 open System.Diagnostics
 open System.IO
@@ -113,9 +113,10 @@ module Az =
     // The what-if operation doesn't make any changes to existing resources. Instead, it predicts the changes if the specified template is deployed.
     let whatIf location deploymentName templateFilename parameters = deployOrValidate WhatIf location deploymentName templateFilename parameters
     /// Generic function for ZipDeploy using custom command (based on application type)
-    let private zipDeploy command appName getZipPath resourceGroup =
+    let private zipDeploy command appName getZipPath resourceGroup slotName =
         let packageFilename = getZipPath deployFolder |> sprintf "\"%s\""
-        az $"""%s{command} deployment source config-zip --resource-group "%s{resourceGroup}" --name "%s{appName}" --src %s{packageFilename}"""
+        let slotArg = match slotName with | None -> "" | Some n -> $"--slot %s{n} "
+        az $"""%s{command} deployment source config-zip %s{slotArg}--resource-group "%s{resourceGroup}" --name "%s{appName}" --src %s{packageFilename}"""
     /// Deploys a zip file to a web app using the Zip Deploy mechanism.
     let zipDeployWebApp = zipDeploy "webapp"
     /// Deploys a zip file to a function app using the Zip Deploy mechanism.
@@ -134,7 +135,7 @@ module Az =
     let tryGetError (error:string) =
         try
             let skip = "Deployment failed. Correlation ID: 3c51a527-c6e2-42a9-acee-7d9c796a626f. ".Length
-            match JsonConvert.DeserializeObject<AzureError> error.[skip..] with
+            match JsonSerializer.Deserialize<AzureError> error.[skip..] with
             | { Error = { Code = "RoleAssignmentExists"; Message = "The role assignment already exists." } } ->
                 "A role assignment defined in this template already exists in Azure, but with a different GUID. If you have recently upgraded to Farmer 1.5, please be aware of a breaking change in the generation of role assignment GUIDs. To resolve this, locate the resource group in the Azure portal, remove the existing role assignment from IAM and then redeploy your Farmer template."
             | _ ->
@@ -150,12 +151,12 @@ type Subscription = { ID : Guid; Name : string; IsDefault : bool }
 /// Returns the list of subscriptions, including which one the default is.
 let authenticate appId secret tenantId =
     Az.loginWithCredentials appId secret tenantId
-    |> Result.map (JsonConvert.DeserializeObject<Subscription []>)
+    |> Result.map (JsonSerializer.Deserialize<Subscription []>)
 
 /// Lists all subscriptions that the logged in identity has access to.
 let listSubscriptions() = result {
     let! response = Az.listSubscriptions()
-    return response |> JsonConvert.DeserializeObject<Subscription array>
+    return response |> JsonSerializer.Deserialize<Subscription array>
 }
 
 
@@ -217,7 +218,7 @@ let private prepareForDeployment parameters deployment = result {
             Az.login()
             |> Result.bind(fun _ -> Az.showAccount())
 
-    let subscriptionDetails = subscriptionDetails |> JsonConvert.DeserializeObject<{| id : Guid; name : string |}>
+    let subscriptionDetails = subscriptionDetails |> JsonSerializer.Deserialize<{| id : Guid; name : string |}>
     printfn "Using subscription '%s' (%O)." subscriptionDetails.name subscriptionDetails.id
 
     return
@@ -257,7 +258,7 @@ let tryExecute resourceGroup parameters deploymentBuilder = result {
     printfn "All done, now parsing ARM response to get any outputs..."
     let! response =
         response
-        |> Result.ofExn JsonConvert.DeserializeObject<{| properties : {| outputs : Map<string, {| value : string |}> |} |}>
+        |> Result.ofExn JsonSerializer.Deserialize<{| properties : {| outputs : Map<string, {| value : string |}> |} |}>
         |> Result.mapError(fun _ -> response)
     return response.properties.outputs |> Map.map (fun _ value -> value.value)
 }

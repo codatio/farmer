@@ -1,6 +1,7 @@
 ﻿[<AutoOpen>]
 module Farmer.Builders.KeyVault
 
+open System.Text.Json
 open Farmer
 open Farmer.KeyVault
 open Farmer.Arm.KeyVault
@@ -187,12 +188,13 @@ type AccessPolicy =
     /// Quickly creates an access policy for the supplied ObjectId. If no permissions are supplied, defaults to GET and LIST.
     static member create (objectId:ObjectId, ?permissions) = accessPolicy { object_id objectId; secret_permissions (permissions |> Option.defaultValue Secret.ReadSecrets) }
     static member private findEntity (searchField, values, searcher) =
+        let deserialize (x:string) = JsonSerializer.Deserialize<{| DisplayName : string; ObjectId : Guid|} array> x
         values
         |> Seq.map (sprintf "%s eq '%s'" searchField)
         |> String.concat " or "
         |> sprintf "\"%s\""
         |> searcher
-        |> Result.map (Newtonsoft.Json.JsonConvert.DeserializeObject<{| DisplayName : string; ObjectId : Guid|} array>)
+        |> Result.map deserialize
         |> Result.toOption
         |> Option.map(Array.map(fun r -> {| r with ObjectId = ObjectId r.ObjectId |}))
         |> Option.defaultValue Array.empty

@@ -1,6 +1,7 @@
 ﻿namespace Farmer
 
 open System
+open System.Text.Json
 
 [<AutoOpen>]
 module internal DuHelpers =
@@ -1186,7 +1187,7 @@ module Resource =
              member _.JsonModel = armObject }
 
     /// Creates a unique IArmResource from a JSON string containing the output you want.
-    let ofJson json = json |> Newtonsoft.Json.Linq.JObject.Parse |> ofObj
+    let ofJson (json:string) = (json |> JsonDocument.Parse).RootElement |> ofObj
 
 module Json =
     /// Creates a unique IArmResource from a JSON string containing the output you want.

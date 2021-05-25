@@ -1,11 +1,12 @@
 module ContainerRegistry
 
+open System.Text.Json
 open Expecto
 open Farmer
 open Farmer.ContainerRegistry
 open Farmer.Builders
 open Microsoft.Rest.Serialization
-open Newtonsoft.Json.Linq
+open BlushingPenguin.JsonPath
 
 type RegistryJson =
     { resources :
@@ -14,7 +15,7 @@ type RegistryJson =
            apiVersion : string
            sku : {| name : string |}
            location : string
-           properties : JObject
+           properties : JsonElement
         |} array
     }
 
@@ -38,11 +39,11 @@ let shouldHaveALocation (r : RegistryJson) = Expect.isNotEmpty (resource(r).loca
 // property assertions
 // admin user
 let shouldHaveAdminUserEnabled (r : RegistryJson) =
-    let b = resource(r).properties.Value<bool> "adminUserEnabled"
+    let b = resource(r).properties.GetProperty("adminUserEnabled").GetBoolean()
     Expect.isTrue b "adminUserEnabled was expected to be enabled"
     r
 let shouldHaveAdminUserDisabled (r : RegistryJson) =
-    let b = resource(r).properties.Value<bool> "adminUserEnabled"
+    let b = resource(r).properties.GetProperty("adminUserEnabled").GetBoolean()
     Expect.isFalse b "adminUserEnabled was expected to be disabled"
     r
 

@@ -109,21 +109,21 @@ let tests = testList "Template" [
         Expect.hasLength resources 2 "Should be two resources"
     }
 
-    test "Location is cascaded to all resources" {
-        let template = arm {
-            location Location.NorthCentralUS
-            add_resources [
-                storageAccount { name "test" }
-                storageAccount { name "test2" }
-            ]
-        }
-        let allLocations = 
-            template
-            |> getResources 
-            |> List.map (fun r -> r.JsonModel |> convertTo<{| Location : string |}>)
+    //test "Location is cascaded to all resources" {
+    //    let template = arm {
+    //        location Location.NorthCentralUS
+    //        add_resources [
+    //            storageAccount { name "test" }
+    //            storageAccount { name "test2" }
+    //        ]
+    //    }
+    //    let allLocations = 
+    //        template
+    //        |> getResources 
+    //        |> List.map (fun r -> r.JsonModel |> convertTo<{| Location : string |}>)
         
-        Expect.allEqual allLocations {| Location = Location.NorthCentralUS.ArmValue |} "Incorrect Location"
-    }
+    //    Expect.allEqual allLocations {| Location = Location.NorthCentralUS.ArmValue |} "Incorrect Location"
+    //}
 
     test "Secure parameter is correctly added" {
         let template = arm {
@@ -226,7 +226,7 @@ let tests = testList "Template" [
             } |> toTemplate |> JsonSerializer.Serialize |> JsonDocument.Parse
         
         let nestedResources = 
-            resources.SelectTokens("$.resources[1].properties.template.resources[*].dependsOn")
+            resources.SelectTokens("$.resources[1].properties.template.resources[*].dependsOn[*]")
             |> Seq.collect (fun dependsOnProperty -> dependsOnProperty.GetString())
             |> Seq.map string
 

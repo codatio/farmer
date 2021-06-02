@@ -6,6 +6,12 @@ open Microsoft.Rest.Serialization
 open System.Text.Json
 open BlushingPenguin.JsonPath
 open Farmer.Arm.ResourceGroup
+open System.Text.Json.Serialization
+
+let deserialzeOptions = JsonSerializerOptions ()
+do
+  deserialzeOptions.PropertyNameCaseInsensitive <- true
+  deserialzeOptions.NumberHandling <- JsonNumberHandling.AllowReadingFromString
 
 [<AutoOpen>]
 module TestHelpers =
@@ -69,7 +75,7 @@ let getResourceGroupDeploymentFromTemplate<'a> (template:ArmTemplate) =
       |> Writer.toJson
       |> JsonDocument.Parse
     let rgd = template.SelectToken (sprintf "$.resources[?(@.type == '%s')].properties.template" Arm.ResourceGroup.resourceGroupDeployments.Type)
-    JsonSerializer.Deserialize<'a>(rgd.Value.GetRawText())
+    JsonSerializer.Deserialize<'a>(rgd.Value.GetRawText(),deserialzeOptions)
     
 let findAzureResources<'T when 'T : null> (serializationSettings:Newtonsoft.Json.JsonSerializerSettings) deployment =
     let tokens = getResourceTokens deployment

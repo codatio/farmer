@@ -2,8 +2,8 @@ module Farmer.Writer
 
 open System.Text.Json
 open System.IO
-open System
 open System.Reflection
+open System.Text.Encodings.Web
 
 module TemplateGeneration =
     let processTemplate (template:ArmTemplate) = {|
@@ -26,6 +26,7 @@ module TemplateGeneration =
         let opts = JsonSerializerOptions()
         opts.WriteIndented <- true
         opts.IgnoreNullValues <- true
+        opts.Encoder <- JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         JsonSerializer.Serialize(data, opts)
 
 let branding () =

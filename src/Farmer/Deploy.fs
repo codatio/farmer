@@ -4,6 +4,7 @@ open System.Text.Json
 open System
 open System.Diagnostics
 open System.IO
+open System.Collections.Generic
 
 let private deployFolder = ".farmer"
 let private prepareDeploymentFolder() =
@@ -134,14 +135,25 @@ module Az =
     type AzureError = { Error : AzureErrorCode }
     let tryGetError (error:string) =
         try
-            let skip = "Deployment failed. Correlation ID: 3c51a527-c6e2-42a9-acee-7d9c796a626f. ".Length
+            let skip =
+              if error.StartsWith("Deployment failed") then
+                "Deployment failed. Correlation ID: 3c51a527-c6e2-42a9-acee-7d9c796a626f. ".Length
+              else
+                0
+            printfn "Skipping:"
+            printfn "%s" error.[..skip]
+            printfn "Parsing:"
+            printfn "%s" error.[skip..]
+            printfn "\n"
             match JsonSerializer.Deserialize<AzureError> error.[skip..] with
             | { Error = { Code = "RoleAssignmentExists"; Message = "The role assignment already exists." } } ->
                 "A role assignment defined in this template already exists in Azure, but with a different GUID. If you have recently upgraded to Farmer 1.5, please be aware of a breaking change in the generation of role assignment GUIDs. To resolve this, locate the resource group in the Azure portal, remove the existing role assignment from IAM and then redeploy your Farmer template."
             | _ ->
                 error
-        with _ ->
+        with ex ->
             printfn "BAD"
+            let formattedException = ex.ToString().Split('\n')|> String.concat "\n\t"
+            printfn $"Internal exception: \n\t{formattedException}"
             error
 
 /// Represents an Azure subscription
@@ -258,9 +270,15 @@ let tryExecute resourceGroup parameters deploymentBuilder = result {
     printfn "All done, now parsing ARM response to get any outputs..."
     let! response =
         response
-        |> Result.ofExn JsonSerializer.Deserialize<{| properties : {| outputs : Map<string, {| value : string |}> |} |}>
-        |> Result.mapError(fun _ -> response)
-    return response.properties.outputs |> Map.map (fun _ value -> value.value)
+        |> Result.ofExn Serialization.ofJson<{| properties : {| outputs : IDictionary<string, {| value : string |}> |} |}>
+        |> Result.mapError
+            (fun err -> 
+              printfn "%s" err
+              response)
+    return
+        response.properties.outputs
+        |> Seq.map(fun r -> r.Key, r.Value.value)
+        |> Map.ofSeq
 }
 
 /// Executes the supplied Deployment against a resource group using the Azure CLI.

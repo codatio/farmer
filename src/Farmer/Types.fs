@@ -347,7 +347,6 @@ module internal DeterministicGuid =
             algorithm.TransformFinalBlock(source, 0, source.Length) |> ignore
             algorithm.Hash
 
-
         let newGuid = Array.zeroCreate<byte> 16
         Array.Copy(hash, 0, newGuid, 0, 16)
 

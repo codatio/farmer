@@ -341,7 +341,82 @@ let tests = testList "Web App Tests" [
         // Default "production" slot is not included as it is created automatically in Azure
         Expect.hasLength slots 1 "Should only be 1 slot"
 
-        Expect.isTrue ((slots.Item 0).AppSettings.ContainsKey("setting")) "Slot should have app service setting"
+        Expect.isTrue ((slots.Item 0).AppSettings.ContainsKey("setting")) "Slot should have slot setting"
+    }
+
+    test "WebApp with slot does not add settings to app service" {
+        let slot = appSlot { name "warm-up" }
+        let config = webApp { 
+            add_slot slot 
+            setting "setting" "some value"
+        }
+
+        let sites = 
+            config 
+            |> getResources
+            |> getResource<Farmer.Arm.Web.Site>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength sites 1 "Should only be 1 slot"
+        
+        Expect.isFalse ((sites.Item 0).AppSettings.ContainsKey("setting")) "App service should not have any settings"
+    }
+    
+    test "WebApp adds literal settings to slots" {
+        let slot = appSlot { name "warm-up" }
+        let site:WebAppConfig = webApp { 
+            add_slot slot; 
+            run_from_package; 
+            website_node_default_version "xxx"; 
+            docker_ci; 
+            docker_use_azure_registry "registry" }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+
+        let settings = (slots.Item 0).AppSettings
+        let expectation = [
+            "APPINSIGHTS_INSTRUMENTATIONKEY"
+            "APPINSIGHTS_PROFILERFEATURE_VERSION"
+            "APPINSIGHTS_SNAPSHOTFEATURE_VERSION"
+            "ApplicationInsightsAgent_EXTENSION_VERSION"
+            "DiagnosticServices_EXTENSION_VERSION"
+            "InstrumentationEngine_EXTENSION_VERSION"
+            "SnapshotDebugger_EXTENSION_VERSION"
+            "XDT_MicrosoftApplicationInsights_BaseExtensions"
+            "XDT_MicrosoftApplicationInsights_Mode"
+            "DOCKER_ENABLE_CI"
+            "DOCKER_REGISTRY_SERVER_PASSWORD"
+            "DOCKER_REGISTRY_SERVER_URL"
+            "DOCKER_REGISTRY_SERVER_USERNAME"] |> List.map(settings.ContainsKey)
+        Expect.allEqual expectation true "Slot should have all literal settings"
+    }
+
+    test "WebApp with different settings on slot and service adds both settings to slot" {
+        let slot = appSlot { 
+            name "warm-up" 
+            setting "slot" "slot value"
+        }
+        let site:WebAppConfig = webApp { 
+            add_slot slot 
+            setting "appService" "app service value"
+        }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+ 
+        let settings = (slots.Item 0).AppSettings;
+        Expect.isTrue (settings.ContainsKey("slot")) "Slot should have slot setting"
+        Expect.isTrue (settings.ContainsKey("appService")) "Slot should have app service setting"
     }
     
     test "WebApp with slot, slot settings override app service setting" {
@@ -365,6 +440,45 @@ let tests = testList "Web App Tests" [
         let (hasValue, value) = (slots.Item 0).AppSettings.TryGetValue("override");
 
         Expect.isTrue hasValue "Slot should have app service setting"
-        Expect.equal value.Value "overridden" "Slot should have app service setting"
+        Expect.equal value.Value "overridden" "Slot should have correct app service value"
+    }
+
+    test "WebApp with slot adds connection strings to slot" {
+        let slot = appSlot { name "warm-up" }
+        let site:WebAppConfig = webApp { 
+            add_slot slot 
+            connection_string "connection_string"
+        }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+
+        Expect.isTrue ((slots.Item 0).ConnectionStrings.ContainsKey("connection_string")) "Slot should have app service connection string"
+    }
+    
+    test "WebApp with different connection strings on slot and service adds both to slot" {
+        let slot = appSlot { 
+            name "warm-up" 
+            connection_string "slot"
+        }
+        let site:WebAppConfig = webApp { 
+            add_slot slot 
+            connection_string "appService"
+        }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+ 
+        Expect.equal ((slots.Item 0).ConnectionStrings.Count) 2 "Slot should have two connection strings"
     }
 ]

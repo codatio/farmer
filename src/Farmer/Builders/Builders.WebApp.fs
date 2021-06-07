@@ -75,14 +75,16 @@ type SlotConfig =
     { Name: string
       AutoSwapSlotName: string
       AppSettings: Map<string,Setting>
-      ConnectionStrings: Map<string,(Setting * ConnectionStringKind)> }
+      ConnectionStrings: Map<string,(Setting * ConnectionStringKind)>
+      Identity: ManagedIdentity }
 
 type SlotBuilder() =
     member this.Yield _ =
         { Name = "staging"
           AutoSwapSlotName = ""
           AppSettings = Map.empty
-          ConnectionStrings = Map.empty }
+          ConnectionStrings = Map.empty
+          Identity = { SystemAssigned = Enabled; UserAssigned = [] } }
 
     [<CustomOperation "name">]
     member this.Name (state,name) : SlotConfig = {state with Name = name}
@@ -441,7 +443,8 @@ type WebAppConfig =
                   Tags = this.Tags
                   AutoSwapSlotName = kvp.Value.AutoSwapSlotName
                   AppSettings = Map.merge (cfg.AppSettings |> Map.toList) webAppSettings
-                  ConnectionStrings = Map.merge (cfg.ConnectionStrings |> Map.toList) this.ConnectionStrings }
+                  ConnectionStrings = Map.merge (cfg.ConnectionStrings |> Map.toList) this.ConnectionStrings 
+                  Identity = cfg.Identity }
         ]
 
 type WebAppBuilder() =

@@ -3,6 +3,7 @@ module Farmer.Arm.Web
 
 open Farmer
 open Farmer.WebApp
+open Farmer.Identity
 open System
 
 let serverFarms = ResourceType ("Microsoft.Web/serverfarms", "2018-02-01")
@@ -278,7 +279,8 @@ type Slot =
       Tags: Map<string,string>
       AutoSwapSlotName: string
       AppSettings: Map<string,Setting>
-      ConnectionStrings: Map<string,Setting*ConnectionStringKind> }
+      ConnectionStrings: Map<string,Setting*ConnectionStringKind> 
+      Identity: ManagedIdentity }
     member this.ResourceName = this.Site.Name / this.SlotName
     interface IParameters with
         member this.SecureParameters =
@@ -306,4 +308,5 @@ type Slot =
                                 |> List.map(fun (k,(v, t)) -> {| name = k; connectionString = v.Value; ``type`` = t.ToString() |})
                         |}
                     |}
+                 identity = this.Identity |> ManagedIdentity.toArmJson
             |} :> _

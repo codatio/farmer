@@ -5,6 +5,7 @@ open Farmer
 open Farmer.Builders
 open Farmer.Identity
 open Farmer.WebApp
+open Farmer.Arm.Web
 open Farmer.Arm
 open Microsoft.Azure.Management.WebSites
 open Microsoft.Azure.Management.WebSites.Models
@@ -326,6 +327,24 @@ let tests = testList "Web App Tests" [
         Expect.hasLength slots 1 "Should only be 1 slot"
     }
 
+    test "WebApp with slot adds managed identity to slot" {
+        let slot = appSlot { name "warm-up" }
+        let site:WebAppConfig = webApp { 
+            add_slot slot
+        }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+
+        let expected = { SystemAssigned = Enabled; UserAssigned = [] }
+        Expect.equal (slots.Item 0).Identity expected "Slot should have slot setting"
+    }
+
     test "WebApp with slot adds settings to slot" {
         let slot = appSlot { name "warm-up" }
         let site:WebAppConfig = webApp { 
@@ -364,10 +383,10 @@ let tests = testList "Web App Tests" [
     test "WebApp adds literal settings to slots" {
         let slot = appSlot { name "warm-up" }
         let site:WebAppConfig = webApp { 
-            add_slot slot; 
-            run_from_package; 
-            website_node_default_version "xxx"; 
-            docker_ci; 
+            add_slot slot
+            run_from_package 
+            website_node_default_version "xxx"
+            docker_ci
             docker_use_azure_registry "registry" }
         Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
 

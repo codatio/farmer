@@ -60,13 +60,7 @@ type FunctionsConfig =
     interface IBuilder with
         member this.ResourceId = sites.resourceId this.Name
         member this.BuildResources location = [
-            { Name = this.Name
-              ServicePlan = this.ServicePlanId
-              Location = location
-              Cors = this.Cors
-              Tags = this.Tags
-              ConnectionStrings = Map.empty
-              AppSettings = [
+            let func = [
                 "FUNCTIONS_WORKER_RUNTIME", (string this.Runtime).ToLower()
                 "WEBSITE_NODE_DEFAULT_VERSION", "10.14.1"
                 "FUNCTIONS_EXTENSION_VERSION", match this.ExtensionVersion with V1 -> "~1" | V2 -> "~2" | V3 -> "~3"
@@ -78,11 +72,20 @@ type FunctionsConfig =
                 if this.OperatingSystem = Windows then
                     "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING", StorageAccount.getConnectionString this.StorageAccountName |> ArmExpression.Eval
                     "WEBSITE_CONTENTSHARE", this.Name.Value.ToLower()
-              ]
-              |> List.map Setting.AsLiteral
-              |> List.append (this.Settings |> Map.toList)
-              |> Map
+              ] 
+            let funcSettings = 
+                func 
+                |> List.map Setting.AsLiteral 
+                |> List.append (this.Settings |> Map.toList)
+                |> Map
 
+            { Name = this.Name
+              ServicePlan = this.ServicePlanId
+              Location = location
+              Cors = this.Cors
+              Tags = this.Tags
+              ConnectionStrings = Map.empty
+              AppSettings = if this.Slots.IsEmpty then funcSettings else Map.empty
               Identity = this.Identity
               Kind =
                 match this.OperatingSystem with
@@ -165,14 +168,16 @@ type FunctionsConfig =
 
             for kvp in this.Slots do
                 let name,cfg = kvp.Key,kvp.Value
+                let webAppSettings = Map.merge (this.Settings |> Map.toList) funcSettings
                 { SlotName = name 
                   Location = location
                   ServicePlan = this.ServicePlanId
                   Site = this.ResourceId
                   Tags = this.Tags
                   AutoSwapSlotName = cfg.AutoSwapSlotName
-                  AppSettings = cfg.AppSettings
-                  ConnectionStrings = cfg.ConnectionStrings }
+                  AppSettings = Map.merge (cfg.AppSettings |> Map.toList) webAppSettings
+                  ConnectionStrings = cfg.ConnectionStrings
+                  Identity = cfg.Identity }
         ]
 
 type FunctionsBuilder() =

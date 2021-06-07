@@ -316,7 +316,7 @@ let tests = testList "Web App Tests" [
     test "WebApp supports adding slots" {
         let slot = appSlot { name "warm-up" }
         let site:WebAppConfig = webApp { add_slot slot }
-        Expect.isTrue (site.Slots.ContainsKey "warm-up") "config should contain slot"
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
 
         let slots = 
             site 
@@ -324,5 +324,47 @@ let tests = testList "Web App Tests" [
             |> getResource<Slot>
         // Default "production" slot is not included as it is created automatically in Azure
         Expect.hasLength slots 1 "Should only be 1 slot"
+    }
+
+    test "WebApp with slot adds settings to slot" {
+        let slot = appSlot { name "warm-up" }
+        let site:WebAppConfig = webApp { 
+            add_slot slot 
+            setting "setting" "some value"
+        }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+
+        Expect.isTrue ((slots.Item 0).AppSettings.ContainsKey("setting")) "Slot should have app service setting"
+    }
+    
+    test "WebApp with slot, slot settings override app service setting" {
+        let slot = appSlot { 
+            name "warm-up" 
+            setting "override" "overridden"
+        }
+        let site:WebAppConfig = webApp { 
+            add_slot slot 
+            setting "override" "some value"
+        }
+        Expect.isTrue (site.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots = 
+            site 
+            |> getResources
+            |> getResource<Slot>
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+
+        let (hasValue, value) = (slots.Item 0).AppSettings.TryGetValue("override");
+
+        Expect.isTrue hasValue "Slot should have app service setting"
+        Expect.equal value.Value "overridden" "Slot should have app service setting"
     }
 ]

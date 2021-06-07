@@ -435,7 +435,7 @@ type WebAppConfig =
                   Site = this.ResourceId
                   Tags = this.Tags
                   AutoSwapSlotName = kvp.Value.AutoSwapSlotName
-                  AppSettings = cfg.AppSettings
+                  AppSettings = Map.fold (fun settings key value -> Map.add key value settings) this.Settings cfg.AppSettings // AppService settings first, then override with slot settings.
                   ConnectionStrings = cfg.ConnectionStrings }
         ]
 

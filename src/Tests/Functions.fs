@@ -91,8 +91,8 @@ let tests = testList "Functions tests" [
         Expect.hasLength slots 1 "Should only be 1 slot"
     }
 
-    test "Functions App with slot adds managed identity to slot" {
-        let slot = appSlot { name "warm-up" }
+    test "Functions App with slot that has system assigned identity adds identity to slot" {
+        let slot = appSlot { name "warm-up"; enable_system_assigned_identity }
         let site:FunctionsConfig = functions { 
             add_slot slot
         }

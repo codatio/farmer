@@ -84,13 +84,19 @@ type SlotBuilder() =
           AutoSwapSlotName = ""
           AppSettings = Map.empty
           ConnectionStrings = Map.empty
-          Identity = { SystemAssigned = Enabled; UserAssigned = [] } }
+          Identity = ManagedIdentity.Empty }
 
     [<CustomOperation "name">]
     member this.Name (state,name) : SlotConfig = {state with Name = name}
 
     [<CustomOperation "autoSlotSwapName">]
     member this.AutoSlotSwapName (state,autoSlotSwapName) : SlotConfig = {state with AutoSwapSlotName = autoSlotSwapName}
+
+    [<CustomOperation "identity">]
+    member this.Identity (state, identity) : SlotConfig = {state with Identity = identity}
+
+    [<CustomOperation "enable_system_assigned_identity">]
+    member this.EnableSystemAssignedIdentity (state) : SlotConfig = this.Identity(state, { SystemAssigned = Enabled; UserAssigned = [] })
 
     [<CustomOperation "setting">]
     /// Adds an AppSetting to this deployment slot

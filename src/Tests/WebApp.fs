@@ -859,6 +859,35 @@ let tests = testList "Web App Tests" [
           Expect.equal scn.SiteName (ResourceName "test") "Parent name should be set"
           Expect.containsAll appSettingNames  [ "sticky_config" ] "Slot config name should be present in template"
           Expect.containsAll dependencies  [ $"[resourceId('Microsoft.Web/sites', '{webApp.Name.ResourceName.Value}')]"] "Slot config names resource should depend on web site"
+    }
 
+    test "Linux automatically turns off logging extension" {
+        let wa = webApp { name "siteX"; operating_system Linux }
+        let extensions = wa |> getResources |> getResource<SiteExtension>
+        Expect.isEmpty extensions "Should not be any extensions"
+    }
+
+    test "Supports docker ports with WEBSITES_PORT"{
+        let wa = webApp { name "testApp"; docker_port 8080; }
+        let port = Expect.wantSome wa.DockerPort "Docker port should be set"
+        Expect.equal port 8080 "Docker port should 8080"
+        
+        let site = wa |> getResources|> getResource<Web.Site> |> List.head
+
+        let settings = Expect.wantSome site.AppSettings "AppSettings should be set"
+        let (hasValue, value) = settings.TryGetValue("WEBSITES_PORT");
+      
+        Expect.isTrue hasValue "WEBSITES_PORT should be set"
+        Expect.equal value.Value "8080" "WEBSITES_PORT should be 8080"
+
+        let defaultWa = webApp { name "testApp"; }
+        Expect.isNone defaultWa.DockerPort "Docker port should not be set"
+    }
+
+    test "Web App enables zoneRedundant in service plan" {
+        let resources = webApp { name "test"; zone_redundant Enabled } |> getResources
+        let sf = resources |> getResource<Web.ServerFarm> |> List.head
+
+        Expect.equal sf.ZoneRedundant (Some Enabled) "ZoneRedundant should be enabled"
     }
 ]

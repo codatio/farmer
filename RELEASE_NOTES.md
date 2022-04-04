@@ -1,8 +1,12 @@
 Release Notes
 =============
 
-## 1.6.32
+## vNext
 * DNS: Add support for private DNS zones and records
+
+## 1.6.32
+
+* Updated documentation on main page from `Writer.quickDeploy` to `Writer.quickWrite`
 
 ## 1.6.31
 * WebApps: Fix flakey deployments of web apps with multiple custom domains.

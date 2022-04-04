@@ -614,12 +614,6 @@ type WebAppConfig =
                     previousHostNameCertificateLinkingDeployment <- Some hostNameCertificateLinkingDeployment.ResourceId
                 | _ -> () 
 
-            if this.CommonWebConfig.SlotSettingNames <> Set.empty then
-                {
-                    SiteName = this.Name.ResourceName;
-                    SlotSettingNames = this.CommonWebConfig.SlotSettingNames;
-                }
-
             match this.CommonWebConfig.IntegratedSubnet with
             | None -> ()
             | Some subnetRef ->

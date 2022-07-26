@@ -367,7 +367,6 @@ let tests = testList "Web App Tests" [
             |> List.filter (fun x -> x.ResourceType = Arm.Web.slots)
 
         let toExceptionMessage(ex:Exception) = ex.Message
-
         let exceptionMessage = Expect.throwsC (fun () -> createSlots() |> ignore) toExceptionMessage
         let expectedExceptionMessage = 
           "App name 'app-name-that-is-longer-than-40-characters' has length=42, which exceeds max length (40) so cannot be used with slots"

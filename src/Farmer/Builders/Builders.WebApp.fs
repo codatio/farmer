@@ -93,8 +93,7 @@ type SlotConfig =
         let errorMsg = $"App name '{owner.Name.Value}' has length={owner.Name.Value.Length}, which exceeds max length ({maxAppNameLengthWhenUsingSlots}) so cannot be used with slots"
         if(owner.Name.Value.Length > maxAppNameLengthWhenUsingSlots) then Exceptions.raiseFarmer errorMsg 
 
-        { 
-          owner with
+        { owner with
             SiteType = SiteType.Slot (owner.Name/this.Name)
             Dependencies = owner.Dependencies |> Set.add (owner.ResourceType.resourceId owner.Name)
             AutoSwapSlotName = this.AutoSwapSlotName

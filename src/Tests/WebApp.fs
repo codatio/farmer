@@ -341,6 +341,40 @@ let tests = testList "Web App Tests" [
         Expect.hasLength slots 1 "Should only be 1 slot"
     }
 
+    test "WebApp supports adding slots when appName length does not exceed 40 characters" {
+        let slot = appSlot { name "warm-up" }
+        let site:WebAppConfig = webApp { name "appname-that-is--exactly--40--characters"; add_slot slot; zip_deploy "test.zip" }
+        Expect.isTrue (site.CommonWebConfig.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let slots =
+            site
+            |> getResources
+            |> getResource<Arm.Web.Site>
+            |> List.filter (fun x -> x.ResourceType = Arm.Web.slots)
+        // Default "production" slot is not included as it is created automatically in Azure
+        Expect.hasLength slots 1 "Should only be 1 slot"
+    }
+
+    test "WebApp does not support adding slots when appName is too long" {
+        let slot = appSlot { name "warm-up" }
+        let site:WebAppConfig = webApp { name "app-name-that-is-longer-than-40-characters"; add_slot slot; zip_deploy "test.zip" }
+        Expect.isTrue (site.CommonWebConfig.Slots.ContainsKey "warm-up") "Config should contain slot"
+
+        let createSlots() =
+            site
+            |> getResources
+            |> getResource<Arm.Web.Site>
+            |> List.filter (fun x -> x.ResourceType = Arm.Web.slots)
+
+        let toExceptionMessage(ex:Exception) = ex.Message
+
+        let exceptionMessage = Expect.throwsC (fun () -> createSlots() |> ignore) toExceptionMessage
+        let expectedExceptionMessage = 
+          "App name 'app-name-that-is-longer-than-40-characters' has length=42, which exceeds max length (40) so cannot be used with slots"
+
+        Expect.equal exceptionMessage expectedExceptionMessage "Unexpected exception"
+     }
+    
     test "WebApp with slot and zip_deploy_slot does not have ZipDeployPath on slot" {
         let slot = appSlot { name "warm-up" }
         let site:WebAppConfig = webApp { name "slots"; add_slot slot; zip_deploy_slot "warm-up" "test.zip" }

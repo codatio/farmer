@@ -335,7 +335,9 @@ type NetworkInterface =
                                        ipConfig.PublicIpAddress
                                        |> Option.map(fun pip -> {| id = pip.ResourceId.ArmExpression.Eval() |})
                                        |> Option.defaultValue Unchecked.defaultof<_>
-                                   subnet = {| id = subnets.resourceId(this.VirtualNetwork.Name, ipConfig.SubnetName).Eval() |}
+                                   subnet = {| id = { this.VirtualNetwork.ResourceId with 
+                                                        Type = subnets
+                                                        Segments = [ipConfig.SubnetName] }.Eval() |}
                                 |}
                             |})
                     |}

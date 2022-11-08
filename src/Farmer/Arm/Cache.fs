@@ -15,6 +15,7 @@ type Redis =
         NonSslEnabled: bool option
         ShardCount: int option
         MinimumTlsVersion: TlsVersion option
+        DisablePublicNetworkAccess: FeatureFlag
         Tags: Map<string, string>
     }
 
@@ -46,6 +47,10 @@ type Redis =
                                 | Tls11 -> "1.1"
                                 | Tls12 -> "1.2")
                             |> Option.toObj
+                        publicNetworkAccess =
+                            match this.DisablePublicNetworkAccess with
+                            | FeatureFlag.Enabled -> "Disabled"
+                            | FeatureFlag.Disabled -> "Enabled"
                         redisConfiguration = this.RedisConfiguration
                     |}
             |}

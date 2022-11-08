@@ -21,7 +21,7 @@ let verifySku (redisCache: RedisConfig, expectedSku: string, expectedCapacity: i
 
 let tests =
     testList
-        "Redis: Sku and Capacity"
+        "Redis Tests"
         [
             test "Standard 250 MB" {
                 let redisCache =
@@ -67,5 +67,47 @@ let tests =
                     }
 
                 verifySku (redisCache, "Premium", 2, "P")
+            }
+            test "Public network access is enabled by default" {
+                let redisCache = redis {
+                    name "some-redis-cache"
+                    sku Redis.Standard_WithCapacity.``1 GB``
+                }
+
+                let deployment = arm { add_resource redisCache }
+                let jobj = deployment.Template |> Writer.toJson |> JObject.Parse
+
+                let publicNetworkAccess = string (jobj.SelectToken "resources[0].properties.publicNetworkAccess")
+
+                Expect.equal "Enabled" publicNetworkAccess "Public network access should be enabled by default"
+            }
+            test "Public network access can be disabled" {
+                let redisCache = redis {
+                    name "some-redis-cache"
+                    sku Redis.Standard_WithCapacity.``1 GB``
+                    disable_public_network_access
+                }
+
+                let deployment = arm { add_resource redisCache }
+                let jobj = deployment.Template |> Writer.toJson |> JObject.Parse
+
+                let publicNetworkAccess = string (jobj.SelectToken "resources[0].properties.publicNetworkAccess")
+
+                Expect.equal "Disabled" publicNetworkAccess "Public network access should be disabled"
+            }
+            test "Public network access can be toggled" {
+                let redisCache = redis {
+                    name "some-redis-cache"
+                    sku Redis.Standard_WithCapacity.``1 GB``
+                    disable_public_network_access
+                    disable_public_network_access FeatureFlag.Disabled
+                }
+
+                let deployment = arm { add_resource redisCache }
+                let jobj = deployment.Template |> Writer.toJson |> JObject.Parse
+
+                let publicNetworkAccess = string (jobj.SelectToken "resources[0].properties.publicNetworkAccess")
+
+                Expect.equal "Enabled" publicNetworkAccess "Public network access should be enabled"
             }
         ]

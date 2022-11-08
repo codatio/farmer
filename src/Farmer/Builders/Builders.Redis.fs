@@ -20,6 +20,7 @@ type RedisConfig =
         NonSslEnabled: bool option
         ShardCount: int option
         MinimumTlsVersion: TlsVersion option
+        DisablePublicNetworkAccess: FeatureFlag
         Tags: Map<string, string>
     }
 
@@ -43,6 +44,7 @@ type RedisConfig =
                     NonSslEnabled = this.NonSslEnabled
                     ShardCount = this.ShardCount
                     MinimumTlsVersion = this.MinimumTlsVersion
+                    DisablePublicNetworkAccess = this.DisablePublicNetworkAccess
                     Tags = this.Tags
                 }
             ]
@@ -57,6 +59,7 @@ type RedisBuilder() =
             NonSslEnabled = None
             ShardCount = None
             MinimumTlsVersion = None
+            DisablePublicNetworkAccess = FeatureFlag.Disabled
             Tags = Map.empty
         }
 
@@ -140,6 +143,15 @@ type RedisBuilder() =
     member _.MinimumTlsVersion(state: RedisConfig, tlsVersion) =
         { state with
             MinimumTlsVersion = Some tlsVersion
+        }
+
+    /// Disable public network access
+    [<CustomOperation "disable_public_network_access">]
+    member _.DisableBlobPublicAccess(state: RedisConfig, ?flag: FeatureFlag) =
+        let flag = defaultArg flag FeatureFlag.Enabled
+
+        { state with
+            DisablePublicNetworkAccess = flag
         }
 
     interface ITaggable<RedisConfig> with

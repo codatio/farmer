@@ -1230,21 +1230,16 @@ let tests =
 
             test "Supports secure custom domains with custom certificate from Key Vault" {
                 let webappName = "test"
-                let thumbprint = ArmExpression.literal "1111583E8FABEF4C0BEF694CBC41C28FB81CD111"
 
                 let keyVaultId = "keyVaultId"
                 let keyVaultSecretName = "keyVaultSecretName"
 
-                let keyVaultCustomCertificateOptions: KeyVaultCustomCertificateOptions
-                    = {
-                        thumbprint = thumbprint
-                        keyVaultCertificate = {
-                            keyVaultId = keyVaultId
-                            keyVaultSecretName = keyVaultSecretName
-                        }
-                    }
+                let keyVaultCertificate: KeyVaultCertificate = {
+                    keyVaultId = keyVaultId
+                    keyVaultSecretName = keyVaultSecretName
+                }
 
-                let domainConfig = SecureDomain("customDomain.io", CustomCertificateFromKeyVault keyVaultCustomCertificateOptions)
+                let domainConfig = SecureDomain("customDomain.io", CustomCertificateFromKeyVault keyVaultCertificate)
 
                 let resources =
                     webApp {
@@ -1306,8 +1301,6 @@ let tests =
                 let innerResource =
                     bindingDeployment.Resources |> getResource<Web.HostNameBinding> |> List.head
 
-                let innerExpectedSslState = Some(SslState.SniBased thumbprint)
-
                 Expect.stringStarts
                     bindingDeployment.DeploymentName.Value
                     "[concat"
@@ -1327,11 +1320,6 @@ let tests =
                     bindingDeployment.Dependencies.Count
                     1
                     "resourceGroupDeployment stage should only contain one dependencies"
-
-                Expect.equal
-                    innerResource.SslState
-                    innerExpectedSslState
-                    $"hostnameBinding should have a {innerExpectedSslState} Ssl state inside the resourceGroupDeployment template"
             }
 
             test "Supports secure custom domains with app service managed certificate" {
